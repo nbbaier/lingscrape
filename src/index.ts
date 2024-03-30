@@ -1,14 +1,14 @@
 import { JSDOM } from "jsdom";
 import type { Paper } from "./types";
+import { getHtml } from "./utils/htmlHelpers";
+import { updatePapers } from "./utils/updatePapers";
+import { loadPapers } from "./utils/loadPapers";
+import { splitKeywords } from "./utils/splitKeywords";
 import {
-  getHtml,
-  loadPapers,
   parseAbstract,
   parseCenterElement,
   parseTable,
-  splitKeywords,
-  updatePapers,
-} from "./utils";
+} from "./utils/parsingHelpers";
 
 const PAPERS_FILE_PATH = "./db/papers.json";
 const papers: Paper[] = [];

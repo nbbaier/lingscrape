@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { loadPapers } from "./utils";
+import { loadPapers } from "./utils/htmlHelpers";
 
 const papers = await loadPapers();
 
