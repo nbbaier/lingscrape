@@ -1,99 +1,22 @@
 import { JSDOM } from "jsdom";
-import fs from "node:fs";
+import type { Paper } from "./types";
+import {
+  getHtml,
+  loadPapers,
+  parseAbstract,
+  parseCenterElement,
+  parseTable,
+  splitKeywords,
+  updatePapers,
+} from "./utils";
 
-type Paper = {
-  _id: string;
-  title: string;
-  authors: string[];
-  date: string;
-  published_in: string;
-  keywords: string[];
-  keywords_raw: string;
-  abstract: string;
-  link: string;
-  downloads: string;
-};
-
-const cacheDir = "./cache";
-const paperFilePath = "./db/papers.json";
-if (!fs.existsSync(paperFilePath)) {
-  console.log("Creating papers.json");
-  await Bun.write(paperFilePath, JSON.stringify([]));
-}
-
-const paperFile = Bun.file("./db/papers.json");
-const existingPaperMetadata: Paper[] = JSON.parse(await paperFile.text());
-
+const PAPERS_FILE_PATH = "./db/papers.json";
 const papers: Paper[] = [];
 
-const CENTER_SELECTOR = "body > center";
-const TABLE_SELECTOR = "body > table";
+const args = Bun.argv.slice(2);
 
-async function getHtml(id: string): Promise<string> {
-  const cachePath = `${cacheDir}/${id}`;
-  let html = "";
-
-  if (!fs.existsSync(cachePath)) {
-    fs.mkdirSync(cachePath, { recursive: true });
-
-    console.log(`Getting ${id}`);
-    const res = await fetch(`https://ling.auf.net/lingbuzz/${id}`);
-    html = await res.text();
-  } else {
-    console.log(`${id} already exists, using cached html`);
-    if (!fs.existsSync(`${cacheDir}/${id}/index.html`)) {
-      const res = await fetch(`https://ling.auf.net/lingbuzz/${id}`);
-      html = await res.text();
-    } else {
-      html = await Bun.file(`${cacheDir}/${id}/index.html`).text();
-    }
-  }
-
-  await Bun.write(`${cacheDir}/${id}/index.html`, html);
-
-  return html;
-}
-
-function parseCenterElement(document: Document): string[] {
-  const centerElement = document.querySelector(CENTER_SELECTOR);
-  return (
-    centerElement?.innerHTML
-      .split("<br>")
-      .map((text) => {
-        const tempDom = new JSDOM(`<div>${text}</div>`);
-        return (
-          tempDom.window.document.querySelector("div")?.textContent?.trim() ||
-          ""
-        );
-      })
-      .filter(Boolean) || []
-  );
-}
-
-function parseTable(document: Document): Map<string, string> {
-  const table = document.querySelector(TABLE_SELECTOR);
-  const rows = Array.from(table?.querySelectorAll("tr") || []);
-
-  return rows.reduce((map, row) => {
-    const cells = Array.from(row.querySelectorAll("td")).map(
-      (td) => td?.textContent?.trim() || ""
-    );
-    if (cells.length > 1) {
-      map.set(cells[0].replace(":", ""), cells[1]);
-    }
-    return map;
-  }, new Map<string, string>());
-}
-
-function parseAbstract(rawAbstract: string): string {
-  return rawAbstract
-    .replace(/"/g, "'")
-    .replace(/\n/g, " ")
-    .replace(/\s+/g, " ");
-}
-
-const START_ID = 2;
-const END_ID = 8004;
+const START_ID = parseInt(args[0]) || 2;
+const END_ID = parseInt(args[1]) || 8004;
 
 async function main() {
   console.time("main");
@@ -119,13 +42,10 @@ async function main() {
       const date = header[2] ? header[2].trim() : "";
       const published_in = rowTexts.get("Published in") || "";
       const keywords_raw = rowTexts.get("keywords") || "";
-      const keywords = rowTexts
-        .get("keywords")
-        ?.split(", ")
-        .map((keyword) => keyword.split("; "))
-        .flat()
-        .map((keyword) => keyword.replace(/\.$/, "").trim()) || [""];
-      const downloads = rowTexts.get("Downloaded") || "";
+      const keywords = splitKeywords(keywords_raw);
+      const downloads = rowTexts.get("Downloaded")
+        ? parseInt(rowTexts.get("Downloaded")?.split(" ")[0] as string)
+        : 0;
 
       const rawAbstract = document.querySelector("body")?.childNodes[5]
         .textContent as string;
@@ -135,7 +55,7 @@ async function main() {
         : "";
 
       papers.push({
-        _id: id,
+        id: id,
         title,
         authors,
         date,
@@ -151,16 +71,16 @@ async function main() {
     }
   }
 
-  let newPapers = existingPaperMetadata;
+  let newPapers = await loadPapers();
+  const updatedPapersData = await updatePapers(papers, newPapers);
 
-  for (const item of papers) {
-    const exists = newPapers.some((obj) => obj._id === item._id);
-    if (!exists) {
-      newPapers.push(item);
-    }
-  }
+  await Bun.write(
+    PAPERS_FILE_PATH,
+    JSON.stringify(
+      updatedPapersData.filter((item) => Object.keys(item).length !== 0)
+    )
+  );
 
-  await Bun.write(paperFilePath, JSON.stringify(newPapers));
   console.timeEnd("main");
 }
 

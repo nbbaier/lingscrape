@@ -9,14 +9,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@types/cheerio": "^0.22.35",
-    "@types/html-validator": "^5.0.6",
+    "@libsql/client": "^0.6.0",
     "@types/jsdom": "^21.1.6",
-    "cheerio": "^1.0.0-rc.12",
-    "html-validate": "^8.18.0",
-    "html-validator": "^6.0.1",
-    "htmlparser2": "^9.1.0",
-    "jsdom": "^24.0.0",
-    "node-html-parser": "^6.1.13"
+    "jsdom": "^24.0.0"
   }
 }
