@@ -1,38 +1,47 @@
-import { type Paper } from "./types";
 import { createClient } from "@libsql/client";
-import { papers } from "./testPapers";
+import { loadPapers } from "./utils";
+
+const papers = await loadPapers();
 
 const client = createClient({
   url: process.env.TURSO_DB_URL as string,
   authToken: process.env.TURSO_AUTH_TOKEN as string,
 });
 
-for (const paper of papers) {
-  const {
-    _id,
-    title,
-    authors,
-    keywords_raw,
-    date,
-    published_in,
-    abstract,
-    downloads,
-  } = paper;
-
-  await client.execute({
-    sql: `insert into papers (id, title, authors, date, published_in, keywords_raw, abstract, downloads)
-    values (:id, :title, :authors, :date, :published_in, :keywords_raw, :abstract, :downloads)`,
-    args: {
-      id: _id,
+async function main() {
+  console.time("main");
+  for (const paper of papers) {
+    const {
+      id,
       title,
-      authors: authors.join(", "),
+      authors,
+      keywords_raw,
       date,
       published_in,
-      keywords_raw,
       abstract,
       downloads,
-    },
-  });
+    } = paper;
+
+    console.log(`Inserting paper ${id}`);
+
+    await client.execute({
+      sql: `insert into papers (id, title, authors, date, published_in, keywords_raw, abstract, downloads)
+    values (:id, :title, :authors, :date, :published_in, :keywords_raw, :abstract, :downloads)`,
+      args: {
+        id,
+        title,
+        authors: authors.join(", "),
+        date,
+        published_in,
+        keywords_raw,
+        abstract,
+        downloads,
+      },
+    });
+  }
+
+  console.log(await client.execute("select count(*) from papers"));
+  console.timeEnd("main");
 }
 
-console.log(await client.execute("select * from papers"));
+main();

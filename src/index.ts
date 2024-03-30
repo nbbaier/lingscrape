@@ -37,7 +37,7 @@ async function main() {
       const header = parseCenterElement(document);
       const rowTexts = parseTable(document);
 
-      const title = header[0].trim();
+      const title = header[0].replace(/"/g, "'").trim();
       const authors = header[1].split(",").map((author) => author.trim());
       const date = header[2] ? header[2].trim() : "";
       const published_in = rowTexts.get("Published in") || "";
