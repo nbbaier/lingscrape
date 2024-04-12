@@ -14,7 +14,7 @@ export async function loadPapers(
     const papersFile = Bun.file(PAPERS_FILE_PATH);
     return JSON.parse(await papersFile.text());
   } catch (error) {
-    console.error("Failed to load papers:", error);
+    console.error("Failed to load papers from path:", PAPERS_FILE_PATH, error);
     throw new Error("Error loading papers data");
   }
 }

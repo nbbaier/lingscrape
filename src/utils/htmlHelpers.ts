@@ -1,7 +1,6 @@
 import fs from "node:fs";
 
-// Checks if the cache directory for a specific ID exists
-export async function cacheDirExists(
+async function cacheDirExists(
   id: string,
   cacheDir = "./cache"
 ): Promise<boolean> {
@@ -9,29 +8,19 @@ export async function cacheDirExists(
   return fs.existsSync(cachePath);
 }
 
-// Creates the cache directory if it doesn't exist
-export async function createCacheDir(
-  id: string,
-  cacheDir = "./cache"
-): Promise<void> {
+async function createCacheDir(id: string, cacheDir = "./cache"): Promise<void> {
   const cachePath = `${cacheDir}/${id}`;
   if (!fs.existsSync(cachePath)) {
     fs.mkdirSync(cachePath, { recursive: true });
   }
 }
-
-// Fetches HTML from the URL
-export async function fetchHtml(
-  id: string,
-  cacheDir = "./cache"
-): Promise<string> {
+async function fetchHtml(id: string, cacheDir = "./cache"): Promise<string> {
   console.log(`Getting ${id}`);
   const res = await fetch(`https://ling.auf.net/lingbuzz/${id}`);
   return res.text();
 }
 
-// Reads the HTML from the cache
-export async function readCachedHtml(
+async function readCachedHtml(
   id: string,
   cacheDir = "./cache"
 ): Promise<string> {
@@ -39,8 +28,7 @@ export async function readCachedHtml(
   return Bun.file(`${cacheDir}/${id}/index.html`).text();
 }
 
-// Writes the fetched HTML to the cache
-export async function writeHtmlToCache(
+async function writeHtmlToCache(
   id: string,
   html: string,
   cacheDir = "./cache"
@@ -48,23 +36,27 @@ export async function writeHtmlToCache(
   await Bun.write(`${cacheDir}/${id}/index.html`, html);
 }
 
-// The modularized getHtml function
 export async function getHtml(
   id: string,
   cacheDir = "./cache"
 ): Promise<string> {
-  let html = "";
+  try {
+    let html = "";
 
-  if (!(await cacheDirExists(id))) {
-    await createCacheDir(id);
-    html = await fetchHtml(id);
-  } else if (!fs.existsSync(`${cacheDir}/${id}/index.html`)) {
-    html = await fetchHtml(id);
-  } else {
-    html = await readCachedHtml(id);
+    if (!(await cacheDirExists(id))) {
+      await createCacheDir(id);
+      html = await fetchHtml(id);
+    } else if (!fs.existsSync(`${cacheDir}/${id}/index.html`)) {
+      html = await fetchHtml(id);
+    } else {
+      html = await readCachedHtml(id);
+    }
+
+    await writeHtmlToCache(id, html);
+
+    return html;
+  } catch (error) {
+    console.error("Failed to get html:", error);
+    throw new Error("Error getting html");
   }
-
-  await writeHtmlToCache(id, html);
-
-  return html;
 }

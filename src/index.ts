@@ -10,15 +10,15 @@ import {
   parseTable,
 } from "./utils/parsingHelpers";
 
-const PAPERS_FILE_PATH = "./db/papers.json";
+const PAPERS_FILE_PATH: string = "./db/papers.json";
 const papers: Paper[] = [];
 
-const args = Bun.argv.slice(2);
+const args: string[] = Bun.argv.slice(2);
 
-const START_ID = parseInt(args[0]) || 2;
-const END_ID = parseInt(args[1]) || 8004;
+const START_ID: number = parseInt(args[0]) || 2;
+const END_ID: number = parseInt(args[1]) || 8004;
 
-async function main() {
+async function main(): Promise<void> {
   console.time("main");
   for (let i = START_ID; i <= END_ID; i++) {
     try {
@@ -71,14 +71,17 @@ async function main() {
     }
   }
 
-  let newPapers = await loadPapers();
-  const updatedPapersData = await updatePapers(papers, newPapers);
+  let currentPapers = await loadPapers();
+  const updatedPapersData = await updatePapers(papers, currentPapers);
 
   await Bun.write(
     PAPERS_FILE_PATH,
     JSON.stringify(
       updatedPapersData.filter((item) => Object.keys(item).length !== 0)
     )
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
   );
 
   console.timeEnd("main");
